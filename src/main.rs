@@ -53,7 +53,7 @@ impl From<string::FromUtf8Error> for DStateError {
 /// read_to_string() uses an expanding buffer, so is dangerous with {proc,kern,sys}fs.
 fn read_to_string_single<T: AsRef<Path>>(path: T) -> Result<String, DStateError> {
     let mut file = File::open(path)?;
-    let mut buf: Vec<u8> = vec![0; BUF_SIZE];
+    let mut buf: Vec<_> = vec![0; BUF_SIZE];
     let len_read = file.read(&mut buf[..])?;
     buf.truncate(len_read);
     let out = String::from_utf8(buf)?;
@@ -64,7 +64,7 @@ fn get_state(path: &PathBuf) -> Result<String, DStateError> {
     let mut stat_path = path.clone();
     stat_path.push("stat");
     let line = read_to_string_single(stat_path)?;
-    let fields: Vec<&str> = line.split_whitespace().collect();
+    let fields: Vec<_> = line.split_whitespace().collect();
     Ok(fields
         .get(2)
         .ok_or(DStateError::InvalidStatFile)?
@@ -91,7 +91,7 @@ fn get_d_state_stacks() -> HashMap<u64, String> {
             continue;
         }
         let dir_name = cont_on_none!(cont_on_none!(path.file_name()).to_str());
-        let pid = cont_on_err!(dir_name.parse::<u64>());
+        let pid = cont_on_err!(dir_name.parse());
         out.insert(
             pid,
             get_stack(&path).unwrap_or_else(|_| "unavailable".to_string()),
