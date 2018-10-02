@@ -2,7 +2,7 @@ extern crate failure;
 #[macro_use]
 extern crate failure_derive;
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::fs::{self, File};
 use std::io::{self, Read};
 use std::path::{Path, PathBuf};
@@ -71,15 +71,16 @@ fn get_state(path: &PathBuf) -> Result<String, DStateError> {
         .to_string())
 }
 
-fn get_stack(pid: u64) -> Result<String, DStateError> {
-    let stack_path: PathBuf = [r"/proc", &pid.to_string(), "stack"].iter().collect();
+fn get_stack(path: &PathBuf) -> Result<String, DStateError> {
+    let mut stack_path = path.clone();
+    stack_path.push("stack");
     let stack = read_to_string_single(stack_path)?;
     Ok(stack)
 }
 
-fn get_d_state_pids() -> HashSet<u64> {
+fn get_d_state_stacks() -> HashMap<u64, String> {
     let dentries = fs::read_dir("/proc").expect("Can't read /proc");
-    let mut pids = HashSet::new();
+    let mut out = HashMap::new();
 
     for dentry in dentries {
         let path = cont_on_err!(dentry).path();
@@ -91,23 +92,15 @@ fn get_d_state_pids() -> HashSet<u64> {
         }
         let dir_name = cont_on_none!(cont_on_none!(path.file_name()).to_str());
         let pid = cont_on_err!(dir_name.parse::<u64>());
-        pids.insert(pid);
-    }
-
-    pids
-}
-
-fn get_pid_to_stack() -> HashMap<u64, String> {
-    let mut out = HashMap::new();
-    for pid in get_d_state_pids() {
         out.insert(
             pid,
-            get_stack(pid).unwrap_or_else(|_| "unavailable".to_string()),
+            get_stack(&path).unwrap_or_else(|_| "unavailable".to_string()),
         );
     }
+
     out
 }
 
 fn main() {
-    println!("{:?}", get_pid_to_stack());
+    println!("{:?}", get_d_state_stacks());
 }
