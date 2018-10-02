@@ -94,7 +94,7 @@ fn get_d_state_stacks() -> HashMap<u64, String> {
         let pid = cont_on_err!(dir_name.parse());
         out.insert(
             pid,
-            get_stack(&path).unwrap_or_else(|_| "unavailable".to_string()),
+            get_stack(&path).unwrap_or_else(|e| format!("unavailable: {:?}", e)),
         );
     }
 
