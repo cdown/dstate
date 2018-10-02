@@ -2,7 +2,7 @@ extern crate failure;
 #[macro_use]
 extern crate failure_derive;
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fs::{self, File};
 use std::io::{self, Read};
 use std::path::{Path, PathBuf};
@@ -71,6 +71,12 @@ fn get_state(path: &PathBuf) -> Result<String, DStateError> {
         .to_string())
 }
 
+fn get_stack(pid: u64) -> Result<String, DStateError> {
+    let stack_path: PathBuf = [r"/proc", &pid.to_string(), "stack"].iter().collect();
+    let stack = read_to_string_single(stack_path)?;
+    Ok(stack)
+}
+
 fn get_d_state_pids() -> HashSet<u64> {
     let dentries = fs::read_dir("/proc").expect("Can't read /proc");
     let mut pids = HashSet::new();
@@ -91,6 +97,17 @@ fn get_d_state_pids() -> HashSet<u64> {
     pids
 }
 
+fn get_pid_to_stack() -> HashMap<u64, String> {
+    let mut out = HashMap::new();
+    for pid in get_d_state_pids() {
+        out.insert(
+            pid,
+            get_stack(pid).unwrap_or_else(|_| "unavailable".to_string()),
+        );
+    }
+    out
+}
+
 fn main() {
-    println!("{:?}", get_d_state_pids());
+    println!("{:?}", get_pid_to_stack());
 }
