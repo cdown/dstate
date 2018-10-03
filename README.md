@@ -1,8 +1,20 @@
 `dstate` quickly allows you to get user and kernel stacks for hung threads.
 "Quickly" here is important, as getting stacks is by its very nature racy.
 
-# Example output:
+This is useful in order to debug the cause of becoming uninterruptible, and
+finding code paths that are particularly susceptible to such states. An example
+of where it can come in useful is documented in [this
+article](https://chrisdown.name/2018/04/17/kernel-adventures-the-curious-case-of-squashfs-stalls.html).
 
+# Requirements
+
+Other than Rust, there are no requirements. An optional dependency is
+[quickstack](https://github.com/yoshinorim/quickstack) if one wants userspace
+stacks, but dstate will work without it, only outputting kernel threads.
+
+# Example output
+
+    $ dstate
     # 1459 (/usr/bin/urxvtd):
 
     Kernel stack:
