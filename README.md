@@ -15,7 +15,7 @@ stacks, but dstate will work without it, only outputting kernel threads.
 # Example output
 
     $ dstate
-    # 1459 (/usr/bin/urxvtd):
+    # 1459 (comm: utxvtd) (cmd: /usr/bin/urxvtd):
 
     Kernel stack:
 
@@ -37,3 +37,38 @@ stacks, but dstate will work without it, only outputting kernel threads.
     #03  0x000055fbe1bb86ac in ev_invoke_pending () from /usr/bin/urxvtd
     #04  0x000055fbe1bb8f51 in ev_run () from /usr/bin/urxvtd
     #05  0x000055fbe1b986c6 in main () from /usr/bin/urxvtd
+
+    ---
+
+    # 296 (comm: btrfs-transacti) (cmd: ):
+
+    Kernel stack:
+
+    [<0>] io_schedule+0x12/0x40
+    [<0>] write_all_supers+0x418/0xa70 [btrfs]
+    [<0>] btrfs_commit_transaction+0x52c/0x8a0 [btrfs]
+    [<0>] transaction_kthread+0x13f/0x170 [btrfs]
+    [<0>] kthread+0x112/0x130
+    [<0>] ret_from_fork+0x35/0x40
+    [<0>] 0xffffffffffffffff
+
+    ---
+
+    # 21277 (comm: vim) (cmd: vim)
+
+    Kernel stack:
+
+    [<0>] io_schedule+0x12/0x40
+    [<0>] write_all_supers+0x418/0xa70 [btrfs]
+    [<0>] btrfs_sync_log+0x5e8/0x970 [btrfs]
+    [<0>] btrfs_sync_file+0x22a/0x430 [btrfs]
+    [<0>] do_fsync+0x38/0x70
+    [<0>] __x64_sys_fsync+0x10/0x20
+    [<0>] do_syscall_64+0x5b/0x170
+    [<0>] entry_SYSCALL_64_after_hwframe+0x44/0xa9
+    [<0>] 0xffffffffffffffff
+
+    Userspace stack:
+
+    Thread 1 (LWP 21277):
+    #01  0x00005645eed9486c in __libc_csu_fini () from /usr/bin/vim
