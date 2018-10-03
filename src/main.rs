@@ -122,18 +122,29 @@ fn get_d_state_stacks() -> HashMap<u64, HashMap<StackType, String>> {
     out
 }
 
-fn get_pid_cmd(pid: u64) -> Result<String, DStateError> {
+fn get_proc_pid_path(pid: u64) -> PathBuf {
     let mut path = PathBuf::from("/proc");
     path.push(pid.to_string());
-    Ok(get_proc_pid_file(&path, "cmdline")?)
+    path
+}
+
+fn get_pid_cmdline(pid: u64) -> Result<String, DStateError> {
+    Ok(get_proc_pid_file(&get_proc_pid_path(pid), "cmdline")?)
+}
+
+fn get_pid_comm(pid: u64) -> Result<String, DStateError> {
+    Ok(get_proc_pid_file(&get_proc_pid_path(pid), "comm")?
+        .trim()
+        .to_string())
 }
 
 fn main() {
     for (pid, stacks) in get_d_state_stacks() {
         println!(
-            "---\n\n# {} ({}):\n\nKernel stack:\n\n{}\nUserspace stack:\n\n{}\n\n",
+            "---\n\n# {} (comm: {}) (cmd: {}):\n\nKernel stack:\n\n{}\nUserspace stack:\n\n{}\n\n",
             pid,
-            get_pid_cmd(pid).unwrap_or_else(|_| "unknown".to_string()),
+            get_pid_comm(pid).unwrap_or_else(|_| "unknown".to_string()),
+            get_pid_cmdline(pid).unwrap_or_else(|_| "unknown".to_string()),
             stacks[&StackType::Kernel],
             stacks[&StackType::User]
         );
