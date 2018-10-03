@@ -1,7 +1,3 @@
-extern crate failure;
-#[macro_use]
-extern crate failure_derive;
-
 use std::collections::HashMap;
 use std::fs::{self, File};
 use std::io::{self, Read};
@@ -29,15 +25,11 @@ macro_rules! cont_on_none {
     };
 }
 
-#[derive(Fail, Debug)]
+#[derive(Debug)]
 enum DStateError {
-    #[fail(display = "{}", _0)]
-    StringUtf8(#[fail(cause)] string::FromUtf8Error),
-    #[fail(display = "{}", _0)]
-    StrUtf8(#[fail(cause)] str::Utf8Error),
-    #[fail(display = "{}", _0)]
-    Io(#[fail(cause)] io::Error),
-    #[fail(display = "Invalid stat file")]
+    StringUtf8(string::FromUtf8Error),
+    StrUtf8(str::Utf8Error),
+    Io(io::Error),
     InvalidStatFile,
 }
 
