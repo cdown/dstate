@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::fs::{self, File};
 use std::io::{self, Read};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::process::Command;
 use std::{str, string};
 
@@ -58,7 +58,7 @@ impl From<str::Utf8Error> for DStateError {
 }
 
 /// read_to_string() uses an expanding buffer, so is dangerous with {proc,kern,sys}fs.
-fn read_to_string_single<T: AsRef<Path>>(path: T) -> Result<String, DStateError> {
+fn read_to_string_single(path: &PathBuf) -> Result<String, DStateError> {
     let mut file = File::open(path)?;
     let mut buf: Vec<_> = vec![0; BUF_SIZE];
     let len_read = file.read(&mut buf[..])?;
@@ -70,7 +70,7 @@ fn read_to_string_single<T: AsRef<Path>>(path: T) -> Result<String, DStateError>
 fn get_state(path: &PathBuf) -> Result<String, DStateError> {
     let mut stat_path = path.clone();
     stat_path.push("stat");
-    let line = read_to_string_single(stat_path)?;
+    let line = read_to_string_single(&stat_path)?;
     let fields: Vec<_> = line.split_whitespace().collect();
     Ok(fields
         .get(2)
@@ -81,7 +81,7 @@ fn get_state(path: &PathBuf) -> Result<String, DStateError> {
 fn get_proc_pid_file(path: &PathBuf, filename: &str) -> Result<String, DStateError> {
     let mut file_path = path.clone();
     file_path.push(filename);
-    let stack = read_to_string_single(file_path)?;
+    let stack = read_to_string_single(&file_path)?;
     Ok(stack)
 }
 
