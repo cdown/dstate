@@ -6,7 +6,8 @@ use std::collections::HashMap;
 use std::fs::{self, File};
 use std::io::{self, Read};
 use std::path::{Path, PathBuf};
-use std::string;
+use std::process::Command;
+use std::{str, string};
 
 static BUF_SIZE: usize = 1024 * 64; // a "large enough" buffer to do one read()
 
@@ -31,11 +32,19 @@ macro_rules! cont_on_none {
 #[derive(Fail, Debug)]
 enum DStateError {
     #[fail(display = "{}", _0)]
-    Utf8(#[fail(cause)] string::FromUtf8Error),
+    StringUtf8(#[fail(cause)] string::FromUtf8Error),
+    #[fail(display = "{}", _0)]
+    StrUtf8(#[fail(cause)] str::Utf8Error),
     #[fail(display = "{}", _0)]
     Io(#[fail(cause)] io::Error),
     #[fail(display = "Invalid stat file")]
     InvalidStatFile,
+}
+
+#[derive(Hash, Eq, PartialEq, Debug)]
+enum StackType {
+    Kernel,
+    User,
 }
 
 impl From<io::Error> for DStateError {
@@ -46,7 +55,13 @@ impl From<io::Error> for DStateError {
 
 impl From<string::FromUtf8Error> for DStateError {
     fn from(err: string::FromUtf8Error) -> DStateError {
-        DStateError::Utf8(err)
+        DStateError::StringUtf8(err)
+    }
+}
+
+impl From<str::Utf8Error> for DStateError {
+    fn from(err: str::Utf8Error) -> DStateError {
+        DStateError::StrUtf8(err)
     }
 }
 
@@ -71,14 +86,22 @@ fn get_state(path: &PathBuf) -> Result<String, DStateError> {
         .to_string())
 }
 
-fn get_stack(path: &PathBuf) -> Result<String, DStateError> {
+fn get_kernel_stack(path: &PathBuf) -> Result<String, DStateError> {
     let mut stack_path = path.clone();
     stack_path.push("stack");
     let stack = read_to_string_single(stack_path)?;
     Ok(stack)
 }
 
-fn get_d_state_stacks() -> HashMap<u64, String> {
+fn get_user_stack(pid: u64) -> Result<String, DStateError> {
+    let raw_out = Command::new("quickstack")
+        .args(&["-d0", "-p", &pid.to_string()])
+        .output()?
+        .stdout;
+    Ok(str::from_utf8(&raw_out)?.trim_left().to_string())
+}
+
+fn get_d_state_stacks() -> HashMap<u64, HashMap<StackType, String>> {
     let dentries = fs::read_dir("/proc").expect("Can't read /proc");
     let mut out = HashMap::new();
 
@@ -92,10 +115,16 @@ fn get_d_state_stacks() -> HashMap<u64, String> {
         }
         let dir_name = cont_on_none!(cont_on_none!(path.file_name()).to_str());
         let pid = cont_on_err!(dir_name.parse());
-        out.insert(
-            pid,
-            get_stack(&path).unwrap_or_else(|e| format!("unavailable: {:?}", e)),
+        let mut stack_map = HashMap::new();
+        stack_map.insert(
+            StackType::Kernel,
+            get_kernel_stack(&path).unwrap_or_else(|e| format!("unavailable: {:?}", e)),
         );
+        stack_map.insert(
+            StackType::User,
+            get_user_stack(pid).unwrap_or_else(|e| format!("unavailable: {:?}", e)),
+        );
+        out.insert(pid, stack_map);
     }
 
     out
