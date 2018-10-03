@@ -132,7 +132,7 @@ fn main() {
     for (pid, stacks) in get_d_state_stacks() {
         println!(
             "---\n\n# {} ({}):\n\nKernel stack:\n\n{}\nUserspace stack:\n\n{}\n\n",
-            pid.to_string(),
+            pid,
             get_pid_cmd(pid).unwrap_or_else(|_| "unknown".to_string()),
             stacks[&StackType::Kernel],
             stacks[&StackType::User]
