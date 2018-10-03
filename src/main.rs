@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::{str, string};
 
-static BUF_SIZE: usize = 1024 * 64; // a "large enough" buffer to do one read()
+static BUF_SIZE: usize = 1024 * 64; // a "large enough" buffer to do one read() on {proc,sys,kern}fs
 
 macro_rules! cont_on_err {
     ($res:expr) => {
@@ -78,10 +78,10 @@ fn get_state(path: &PathBuf) -> Result<String, DStateError> {
         .to_string())
 }
 
-fn get_kernel_stack(path: &PathBuf) -> Result<String, DStateError> {
-    let mut stack_path = path.clone();
-    stack_path.push("stack");
-    let stack = read_to_string_single(stack_path)?;
+fn get_proc_pid_file(path: &PathBuf, filename: &str) -> Result<String, DStateError> {
+    let mut file_path = path.clone();
+    file_path.push(filename);
+    let stack = read_to_string_single(file_path)?;
     Ok(stack)
 }
 
@@ -90,7 +90,7 @@ fn get_user_stack(pid: u64) -> Result<String, DStateError> {
         .args(&["-d0", "-p", &pid.to_string()])
         .output()?
         .stdout;
-    Ok(str::from_utf8(&raw_out)?.trim_left().to_string())
+    Ok(str::from_utf8(&raw_out)?.trim().to_string())
 }
 
 fn get_d_state_stacks() -> HashMap<u64, HashMap<StackType, String>> {
@@ -110,7 +110,7 @@ fn get_d_state_stacks() -> HashMap<u64, HashMap<StackType, String>> {
         let mut stack_map = HashMap::new();
         stack_map.insert(
             StackType::Kernel,
-            get_kernel_stack(&path).unwrap_or_else(|e| format!("unavailable: {:?}", e)),
+            get_proc_pid_file(&path, "stack").unwrap_or_else(|e| format!("unavailable: {:?}", e)),
         );
         stack_map.insert(
             StackType::User,
@@ -122,6 +122,20 @@ fn get_d_state_stacks() -> HashMap<u64, HashMap<StackType, String>> {
     out
 }
 
+fn get_pid_cmd(pid: u64) -> Result<String, DStateError> {
+    let mut path = PathBuf::from("/proc");
+    path.push(pid.to_string());
+    Ok(get_proc_pid_file(&path, "cmdline")?)
+}
+
 fn main() {
-    println!("{:?}", get_d_state_stacks());
+    for (pid, stacks) in get_d_state_stacks() {
+        println!(
+            "---\n\n# {} ({}):\n\nKernel stack:\n\n{}\nUserspace stack:\n\n{}\n\n",
+            pid.to_string(),
+            get_pid_cmd(pid).unwrap_or_else(|_| "unknown".to_string()),
+            stacks[&StackType::Kernel],
+            stacks[&StackType::User]
+        );
+    }
 }
