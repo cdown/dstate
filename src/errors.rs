@@ -1,4 +1,4 @@
-use std::{str, string, io};
+use std::{io, str, string};
 
 #[derive(Debug)]
 pub enum DStateError {

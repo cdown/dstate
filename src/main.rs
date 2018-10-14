@@ -2,13 +2,13 @@
 mod macros;
 mod errors;
 
+use errors::DStateError;
 use std::collections::HashMap;
 use std::fs::{self, File};
-use std::io::{self, Read};
+use std::io::Read;
 use std::path::PathBuf;
 use std::process::Command;
-use std::{str, string};
-use errors::DStateError;
+use std::str;
 
 static BUF_SIZE: usize = 1024 * 64; // a "large enough" buffer to do one read() on {proc,sys,kern}fs
 
@@ -46,15 +46,34 @@ fn get_proc_pid_file(path: &PathBuf, filename: &str) -> Result<String, DStateErr
     Ok(stack)
 }
 
-fn get_user_stack(pid: u64) -> Result<String, DStateError> {
+fn get_kernel_stack(path: &PathBuf) -> Result<Option<String>, DStateError> {
+    let stack = get_proc_pid_file(&path, "stack")?;
+
+    // If there's only one line (address -1), there's no current kernel stack
+    if stack.lines().count() < 2 {
+        Ok(None)
+    } else {
+        Ok(Some(stack))
+    }
+}
+
+fn get_user_stack(pid: u64) -> Result<Option<String>, DStateError> {
     let raw_out = Command::new("quickstack")
         .args(&["-d0", "-p", &pid.to_string()])
         .output()?
         .stdout;
-    Ok(str::from_utf8(&raw_out)?.trim().to_string())
+
+    let stack = str::from_utf8(&raw_out)?.trim().to_string();
+
+    if !stack.contains("0x") {
+        // This stack is empty and probably a kernel thread
+        Ok(None)
+    } else {
+        Ok(Some(stack))
+    }
 }
 
-fn get_d_state_stacks() -> HashMap<u64, HashMap<StackType, String>> {
+fn get_d_state_stacks() -> HashMap<u64, HashMap<StackType, Option<String>>> {
     let dentries = fs::read_dir("/proc").expect("Can't read /proc");
     let mut out = HashMap::new();
 
@@ -71,11 +90,11 @@ fn get_d_state_stacks() -> HashMap<u64, HashMap<StackType, String>> {
         let mut stack_map = HashMap::new();
         stack_map.insert(
             StackType::Kernel,
-            get_proc_pid_file(&path, "stack").unwrap_or_else(|e| format!("unavailable: {:?}", e)),
+            get_kernel_stack(&path).unwrap_or_else(|e| Some(format!("unavailable: {:?}", e))),
         );
         stack_map.insert(
             StackType::User,
-            get_user_stack(pid).unwrap_or_else(|e| format!("unavailable: {:?}", e)),
+            get_user_stack(pid).unwrap_or_else(|e| Some(format!("unavailable: {:?}", e))),
         );
         out.insert(pid, stack_map);
     }
@@ -100,14 +119,16 @@ fn get_pid_comm(pid: u64) -> Result<String, DStateError> {
 }
 
 fn main() {
-    for (pid, stacks) in get_d_state_stacks() {
+    for (ref pid, ref mut stacks) in get_d_state_stacks() {
+        let kstack = stacks.remove(&StackType::Kernel).unwrap_or(None);
+        let ustack = stacks.remove(&StackType::User).unwrap_or(None);
         println!(
             "---\n\n# {} (comm: {}) (cmd: {}):\n\nKernel stack:\n\n{}\nUserspace stack:\n\n{}\n\n",
             pid,
-            get_pid_comm(pid).unwrap_or_else(|_| "unknown".to_string()),
-            get_pid_cmdline(pid).unwrap_or_else(|_| "unknown".to_string()),
-            stacks[&StackType::Kernel],
-            stacks[&StackType::User]
+            get_pid_comm(*pid).unwrap_or_else(|_| "unknown".to_string()),
+            get_pid_cmdline(*pid).unwrap_or_else(|_| "unknown".to_string()),
+            kstack.unwrap_or_else(|| "None".to_string()),
+            ustack.unwrap_or_else(|| "None".to_string()),
         );
     }
 }
