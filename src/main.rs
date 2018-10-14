@@ -1,45 +1,21 @@
+#[macro_use]
+mod macros;
+mod errors;
+
 use std::collections::HashMap;
 use std::fs::{self, File};
 use std::io::{self, Read};
 use std::path::PathBuf;
 use std::process::Command;
 use std::{str, string};
+use errors::DStateError;
 
 static BUF_SIZE: usize = 1024 * 64; // a "large enough" buffer to do one read() on {proc,sys,kern}fs
-
-#[macro_use]
-mod macros;
-
-#[derive(Debug)]
-enum DStateError {
-    StringUtf8(string::FromUtf8Error),
-    StrUtf8(str::Utf8Error),
-    Io(io::Error),
-    InvalidStatFile,
-}
 
 #[derive(Hash, Eq, PartialEq, Debug)]
 enum StackType {
     Kernel,
     User,
-}
-
-impl From<io::Error> for DStateError {
-    fn from(err: io::Error) -> DStateError {
-        DStateError::Io(err)
-    }
-}
-
-impl From<string::FromUtf8Error> for DStateError {
-    fn from(err: string::FromUtf8Error) -> DStateError {
-        DStateError::StringUtf8(err)
-    }
-}
-
-impl From<str::Utf8Error> for DStateError {
-    fn from(err: str::Utf8Error) -> DStateError {
-        DStateError::StrUtf8(err)
-    }
 }
 
 /// read_to_string() uses an expanding buffer, so is dangerous with {proc,kern,sys}fs.
