@@ -119,14 +119,14 @@ fn get_pid_comm(pid: u64) -> Result<String, DStateError> {
 }
 
 fn main() {
-    for (ref pid, ref mut stacks) in get_d_state_stacks() {
+    for (pid, mut stacks) in get_d_state_stacks() {
         let kstack = stacks.remove(&StackType::Kernel).unwrap_or(None);
         let ustack = stacks.remove(&StackType::User).unwrap_or(None);
         println!(
             "---\n\n# {} (comm: {}) (cmd: {}):\n\nKernel stack:\n\n{}\nUserspace stack:\n\n{}\n\n",
             pid,
-            get_pid_comm(*pid).unwrap_or_else(|_| "unknown".to_string()),
-            get_pid_cmdline(*pid).unwrap_or_else(|_| "unknown".to_string()),
+            get_pid_comm(pid).unwrap_or_else(|_| "unknown".to_string()),
+            get_pid_cmdline(pid).unwrap_or_else(|_| "unknown".to_string()),
             kstack.unwrap_or_else(|| "None".to_string()),
             ustack.unwrap_or_else(|| "None".to_string()),
         );
