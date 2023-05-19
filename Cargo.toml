@@ -2,5 +2,6 @@
 name = "dstate"
 version = "0.1.0"
 authors = ["Chris Down <chris@chrisdown.name>"]
+edition = "2021"
 
 [dependencies]
