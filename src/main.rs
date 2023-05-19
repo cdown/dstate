@@ -6,7 +6,7 @@ use errors::DStateError;
 use std::collections::HashMap;
 use std::fs::{self, File};
 use std::io::Read;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::str;
 
@@ -28,8 +28,8 @@ fn read_to_string_single(path: &PathBuf) -> Result<String, DStateError> {
     Ok(out)
 }
 
-fn get_state(path: &PathBuf) -> Result<String, DStateError> {
-    let mut stat_path = path.clone();
+fn get_state(path: &Path) -> Result<String, DStateError> {
+    let mut stat_path = path.to_path_buf();
     stat_path.push("stat");
     let line = read_to_string_single(&stat_path)?;
     let fields: Vec<_> = line.split_whitespace().collect();
@@ -39,15 +39,15 @@ fn get_state(path: &PathBuf) -> Result<String, DStateError> {
         .to_string())
 }
 
-fn get_proc_pid_file(path: &PathBuf, filename: &str) -> Result<String, DStateError> {
-    let mut file_path = path.clone();
+fn get_proc_pid_file(path: &Path, filename: &str) -> Result<String, DStateError> {
+    let mut file_path = path.to_path_buf();
     file_path.push(filename);
     let stack = read_to_string_single(&file_path)?;
     Ok(stack)
 }
 
-fn get_kernel_stack(path: &PathBuf) -> Result<Option<String>, DStateError> {
-    let stack = get_proc_pid_file(&path, "stack")?;
+fn get_kernel_stack(path: &Path) -> Result<Option<String>, DStateError> {
+    let stack = get_proc_pid_file(path, "stack")?;
 
     // If there's only one line (address -1), there's no current kernel stack
     if stack.lines().count() < 2 {
