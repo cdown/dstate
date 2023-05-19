@@ -6,6 +6,7 @@ macro_rules! cont_on_err {
         }
     };
 }
+pub(crate) use cont_on_err;
 
 macro_rules! cont_on_none {
     ($res:expr) => {
@@ -15,3 +16,4 @@ macro_rules! cont_on_none {
         }
     };
 }
+pub(crate) use cont_on_none;

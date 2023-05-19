@@ -1,8 +1,8 @@
-#[macro_use]
-mod macros;
 mod errors;
+mod macros;
 
-use errors::DStateError;
+use crate::errors::DStateError;
+use crate::macros::{cont_on_err, cont_on_none};
 use std::collections::HashMap;
 use std::fs::{self, File};
 use std::io::Read;
