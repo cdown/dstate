@@ -59,7 +59,7 @@ fn get_kernel_stack(path: &Path) -> Result<Option<String>, DStateError> {
 
 fn get_user_stack(pid: u64) -> Result<Option<String>, DStateError> {
     let raw_out = Command::new("quickstack")
-        .args(&["-d0", "-p", &pid.to_string()])
+        .args(["-d0", "-p", &pid.to_string()])
         .output()?
         .stdout;
 
@@ -128,7 +128,7 @@ fn main() {
         );
 
         for (stype, print_name) in &[(StackType::Kernel, "Kernel"), (StackType::User, "User")] {
-            if let Some(stack) = stacks.remove(&stype).unwrap_or(None) {
+            if let Some(stack) = stacks.remove(stype).unwrap_or(None) {
                 println!("{} stack:\n\n{}\n", print_name, stack);
             }
         }
