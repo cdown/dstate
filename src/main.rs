@@ -109,7 +109,7 @@ fn get_proc_pid_path(pid: u64) -> PathBuf {
 }
 
 fn get_pid_cmdline(pid: u64) -> Result<String, DStateError> {
-    Ok(get_proc_pid_file(&get_proc_pid_path(pid), "cmdline")?)
+    get_proc_pid_file(&get_proc_pid_path(pid), "cmdline")
 }
 
 fn get_pid_comm(pid: u64) -> Result<String, DStateError> {
